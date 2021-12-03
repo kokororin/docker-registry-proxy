@@ -16,6 +16,7 @@ limitations under the License.
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"fmt"
@@ -27,6 +28,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"github.com/joho/godotenv"
 )
 
 const (
@@ -45,6 +47,10 @@ type registryConfig struct {
 }
 
 func main() {
+  err := godotenv.Load()
+  // if err != nil {
+  //   log.Fatal("Error loading .env file")
+  // }
 	port := os.Getenv("PORT")
 	if port == "" {
 		log.Fatal("PORT environment variable not specified")
@@ -207,6 +213,15 @@ type registryRoundtripper struct {
 }
 
 func (rrt *registryRoundtripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	if req.Method == http.MethodHead {
+		resp := &http.Response{
+			StatusCode: http.StatusBadRequest,
+			Body: ioutil.NopCloser(bytes.NewBufferString("HEAD not supported")),
+			Header: make(http.Header),
+		}
+		resp.Header.Set("X-Error", "HEAD requests are not supported")
+		return resp, nil
+	}
 	log.Printf("request received. url=%s", req.URL)
 
 	if rrt.auth != nil {
